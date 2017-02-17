@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <string.h>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -29,17 +31,17 @@ static void readEntireShaderFromFile(struct shaderData *shader, GLenum shaderTyp
     GetFileTime(shader->fileHandle, NULL, NULL, &shader->lastWriteTime);
     GetFileSizeEx(shader->fileHandle, &shader->fileSize);
 
-    fileData = (char*)malloc((size_t)shader->fileSize.QuadPart);
-    
+    fileData = (char*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, shader->fileSize.QuadPart);
+    assert(fileData);
     ReadFile(shader->fileHandle, fileData, (DWORD)shader->fileSize.QuadPart, &bytesRead, NULL);
-
     shader->fileLoaded = true;
-
         
     shader->shader = glCreateShader(shaderType);
 
-    GLchar *shaderCode = (GLchar*)malloc(shader->fileSize.QuadPart);
-    CopyMemory(shaderCode, fileData, shader->fileSize.QuadPart);
+    GLchar *shaderCode = (GLchar*)HeapAlloc(GetProcessHeap(),
+                                            HEAP_ZERO_MEMORY, shader->fileSize.QuadPart);
+    assert(shaderCode);
+    CopyMemory((void*)shaderCode, (void*)fileData, shader->fileSize.QuadPart);
     glShaderSource(shader->shader, 1, &shaderCode, NULL);
     glCompileShader(shader->shader);
 
@@ -57,12 +59,13 @@ static void readEntireShaderFromFile(struct shaderData *shader, GLenum shaderTyp
     {
         //NOTE don't load new shader if it didn't compile!!
         // ONLY SUPPORTS MAX_SHADER_CODE_SIZE bytes large shaders
+        ZeroMemory(shader->code, MAX_SHADER_CODE_SIZE);
         CopyMemory(shader->code, fileData, MAX_SHADER_CODE_SIZE);
         shader->isModified = true;
     }
 
-    free(fileData);
-    free((void*)shaderCode);
+    HeapFree(GetProcessHeap(), 0, fileData);
+    HeapFree(GetProcessHeap(), 0, shaderCode);
 }
 
 //TODO make code size dynamic, not static
@@ -180,6 +183,16 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     struct quad quad;
     initQuad(&quad);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    struct shaderData vertexShader = {};
+    struct shaderData fragmentShader = {};
+
+    strcpy(vertexShader.filePath, "vertex.glsl");
+    strcpy(fragmentShader.filePath, "fragment.glsl");
+
+    GLuint shaderProgram = 0;
+    hotLoadShaderFromFile(&vertexShader, &fragmentShader, &shaderProgram);
+    
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -191,6 +204,8 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        glUseProgram(shaderProgram);
+        
         glBindVertexArray(quad.VAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
