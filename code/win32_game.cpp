@@ -204,7 +204,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         // game update
 
         m4x4 transform = identity();
-        transform = scale(transform, { 0.5f, 0.5f, 0.5f, });
+        transform = scale(transform, { 1.0f, 1.0f, 1.0f, });
         transform = rotate(transform, (GLfloat)glfwGetTime() * 50.0f, {0.0f, 0.0f, 1.0f, });
 
         GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
