@@ -10,7 +10,7 @@
 #include <glm/gtc/random.hpp>
 
 #include "win32_game.h"
-
+#include "game_math.h"
 /*
   1280×720 (HD, 720p)
   1920×1080 (FHD, Full HD, 2K 1080p)
@@ -182,7 +182,7 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
 
     struct quad quad;
     initQuad(&quad);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     struct shaderData vertexShader = {};
     struct shaderData fragmentShader = {};
@@ -192,6 +192,8 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
 
     GLuint shaderProgram = 0;
     hotLoadShaderFromFile(&vertexShader, &fragmentShader, &shaderProgram);
+
+    m4x4 projection = orthographicProjection((real32)windowWidth/(real32)windowHeight);
     
     while (!glfwWindowShouldClose(window))
     {
@@ -201,6 +203,16 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
 
         // game update
 
+        m4x4 transform = identity();
+        transform = scale(transform, { 0.5f, 0.5f, 0.5f, });
+        transform = rotate(transform, (GLfloat)glfwGetTime() * 50.0f, {0.0f, 0.0f, 1.0f, });
+
+        GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
+        GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection.E[0]);
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transform.E[0]);
+        
+        
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 

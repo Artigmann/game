@@ -17,7 +17,8 @@ typedef uint64_t uint64;
 
 typedef int32_t bool32;
 
-
+typedef float real32;
+typedef double real64;
 
 #define MAX_SHADER_CODE_SIZE 1024
 //NOTE make one struct for all shaders??
@@ -40,6 +41,9 @@ struct shaders
     struct shaderData fragmentShader;
 };
 
-
+struct player
+{
+    
+};
 
 #endif
