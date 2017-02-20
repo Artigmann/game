@@ -30,11 +30,7 @@ struct shader
 struct gameObject
 {
     v2 position, size, velocity;
-    v3 color;
-
-    glm::vec2 glmPos, glmSize;
-    glm::vec3 glmColor;
-    
+    v3 color;    
     real32 rotation;
     bool32 solid;
 };
@@ -49,6 +45,7 @@ struct gameLevel
 
 struct game
 {
+    bool32 keys[1024];    
     struct gameLevel level;
     struct gameObject player;
 };
