@@ -1,24 +1,9 @@
 #if !defined(WIN32_GAME_H)
 #define WIN32_GAME_H
 
-#include <stdint.h>
+
 
 #define arrayLength(array) sizeof(array)/sizeof(array[0])
-
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-
-typedef int32_t bool32;
-
-typedef float real32;
-typedef double real64;
 
 #define MAX_SHADER_CODE_SIZE 1024
 //NOTE make one struct for all shaders??
@@ -26,7 +11,7 @@ struct shaderData
 {
     GLuint shader;
     BOOL fileLoaded;
-    GLboolean isModified;
+    BOOL isModified;
     char filePath[512];
     HANDLE fileHandle = INVALID_HANDLE_VALUE;
     LARGE_INTEGER fileSize;
@@ -34,16 +19,34 @@ struct shaderData
     char code[MAX_SHADER_CODE_SIZE];    
 };
 //NOTE like this??
-struct shaders
+struct shader
 {
     GLuint shaderProgram;
+    struct shaderData geometry;
     struct shaderData vertex;
     struct shaderData fragmentShader;
 };
 
-struct player
+struct gameObject
 {
-    
+    v2 position, size, velocity;
+    v3 color;
+    real32 rotation;
+    bool32 solid;
+};
+
+#define LEVEL_WIDTH 2
+#define LEVEL_HEIGHT 2
+
+struct gameLevel
+{
+    struct gameObject tiles[LEVEL_HEIGHT*LEVEL_WIDTH];
+};
+
+struct game
+{
+    struct gameLevel level;
+    struct gameObject player;
 };
 
 #endif

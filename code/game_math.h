@@ -3,48 +3,6 @@
 
 #include <math.h>
 
-#define pi32 3.14159265359f
-
-union v2
-{
-    struct
-    {
-        real32 x, y;
-    };
-    real32 E[2];
-};
-
-union v3
-{
-    struct
-    {
-        real32 x, y, z;
-    };
-    real32 E[3];
-};
-
-union v4
-{
-    struct
-    {
-        union
-        {
-            v3 xyz;
-            struct
-            {
-                real32 x, y, z;
-            };
-        };
-         real32 w;
-    };
-};
-
-struct m4x4
-{
-    // NOTE(casey): These are stored ROW MAJOR - E[ROW][COLUMN]!!!
-    real32 E[4][4];
-};
-
 inline v2 operator*(real32 a, v2 b)
 {
     v2 result;
