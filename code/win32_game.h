@@ -31,12 +31,16 @@ struct gameObject
 {
     v2 position, size, velocity;
     v3 color;
+
+    glm::vec2 glmPos, glmSize;
+    glm::vec3 glmColor;
+    
     real32 rotation;
     bool32 solid;
 };
 
-#define LEVEL_WIDTH 2
-#define LEVEL_HEIGHT 2
+#define LEVEL_WIDTH 15
+#define LEVEL_HEIGHT 8
 
 struct gameLevel
 {

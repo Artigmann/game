@@ -147,7 +147,7 @@ static void initQuad(struct quad *quad)
 
         0.0f, 1.0f,
         1.0f, 1.0f,
-        1.0f, 0.0f, 
+        1.0f, 0.0f,
     };
 
     glGenVertexArrays(1, &quad->VAO);
@@ -167,21 +167,39 @@ static void drawGameObject(struct gameObject *object, struct quad *quad, GLuint 
 {
     
     glUseProgram(shaderProgram);
-
+#if 1
     m4x4 model = identity();
     model = translate(model, {object->position.x, object->position.y, 0.0f});
 
     model = scale(model, {object->size.x, object->size.y, 1.0f});
     
-    m4x4 projection = orthographicProjection((real32)windowWidth/(real32)windowHeight);
-                
     GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
     glUniformMatrix4fv(transformLoc, 1, GL_FALSE, model.E[0]);
+
+    
+    m4x4 projection = orthographicProjection(0.0f, (real32)windowWidth, (real32)windowHeight,
+                                             0.0f, -1.0f, 1.0f);
     GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection.E[0]);
+    
     GLuint colorLoc = glGetUniformLocation(shaderProgram, "ourColor");
     glUniform3fv(colorLoc, 1, &object->color.E[0]);
-    
+#else
+
+    glm::mat4 model;
+    model = glm::translate(model, glm::vec3(object->glmPos, 0.0f));
+    model = glm::scale(model, glm::vec3(object->glmSize, 1.0f));
+
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<GLfloat>(windowWidth), 
+                                      static_cast<GLfloat>(windowHeight), 0.0f, -1.0f, 1.0f);
+    GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+                    
+    GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model));
+    GLuint colorLoc = glGetUniformLocation(shaderProgram, "ourColor");
+    glUniform3fv(colorLoc, 1, glm::value_ptr(object->glmColor));
+#endif    
     glBindVertexArray(quad->VAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
@@ -211,30 +229,22 @@ static void initGameObject(struct gameObject *object)
 
 static void initLevel(struct gameLevel *level)
 {
-#if 0    
     int tileData[LEVEL_HEIGHT][LEVEL_WIDTH] =
     {
-        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,},
-    };
-#endif
-    
-    int tileData[LEVEL_HEIGHT][LEVEL_WIDTH] =
-    {
-        {1, 1},
-        {1, 1},
+        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,},
+        {0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
+        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
     };
 
     GLuint height = LEVEL_HEIGHT;
     GLuint width = LEVEL_WIDTH;    
-    real32 unitWdidht = windowWidth/(real32)width;
-    real32 unitHeight = (real32)windowHeight/height;
+    real32 tileWidth = windowWidth/(real32)width;
+    real32 tileHeight = (windowHeight)/(real32)height;
 
     int tileIndex = 0;
     
@@ -246,18 +256,34 @@ static void initLevel(struct gameLevel *level)
             if (tileData[y][x] == 1)
             {
                 level->tiles[tileIndex].solid = true;
-                level->tiles[tileIndex].position = { unitWdidht * x, unitHeight * y };
-                level->tiles[tileIndex].size = { unitWdidht, unitHeight };
+                level->tiles[tileIndex].position = { tileWidth * x, tileHeight * y };
+                level->tiles[tileIndex].size = { tileWidth, tileHeight };
                 level->tiles[tileIndex].color = { 0.0f, 0.0f, 0.0f };
 
+                glm::vec2 pos(tileWidth * x, tileHeight * y);
+                glm::vec2 size(tileWidth, tileHeight);
+                glm::vec3 color(0.0f, 0.0f, 0.0f);
+                level->tiles[tileIndex].glmPos = pos;
+                level->tiles[tileIndex].glmSize = size;
+                level->tiles[tileIndex].glmColor = color;
+
+                
                 tileIndex++;
             }
             else
             {
                 level->tiles[tileIndex].solid = false;
-                level->tiles[tileIndex].position = { unitWdidht * x, unitHeight * y };
-                level->tiles[tileIndex].size = { unitWdidht, unitHeight };
+                level->tiles[tileIndex].position = { tileWidth*x, tileHeight*y };
+                level->tiles[tileIndex].size = { tileWidth, tileHeight };
                 level->tiles[tileIndex].color = { 1.0f, 1.0f, 1.0f };
+
+                
+                glm::vec2 pos(tileWidth * x, tileHeight * y);
+                glm::vec2 size(tileWidth, tileHeight);
+                glm::vec3 color(1.0f, 1.0f, 1.0f);
+                level->tiles[tileIndex].glmPos = pos;
+                level->tiles[tileIndex].glmSize = size;
+                level->tiles[tileIndex].glmColor = color;
 
                 tileIndex++;
             }
@@ -333,10 +359,10 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         // game process input
 
         // game update
-#if 0        
+#if 0
         m4x4 transform = identity();
 
-        transform = scale(transform, { 1.0f, 1.0f, 1.0f, });
+        transform = scale(transform, { 0.5f, 0.5f, 0.0f, });
         transform = rotate(transform, (GLfloat)glfwGetTime() * 50.0f, {0.0f, 0.0f, 1.0f, });
 
         
@@ -354,13 +380,35 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
 
-#endif
+#elif 0
+        m4x4 transform = identity();
+
+        transform = translate(transform, {0.0f, 0.0f, 0.0f});
+        transform = scale(transform, { 85.0f, 45.0f, 0.0f, });
+//        transform = rotate(transform, (GLfloat)glfwGetTime() * 50.0f, {0.0f, 0.0f, 1.0f, });
+
+        
+        GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transform.E[0]);
+        GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection.E[0]);
+        
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glUseProgram(shaderProgram);
+        
+        glBindVertexArray(quad.VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+
+#else        
         // game render
-        glClearColor(0.0f, 0.7f, 0.3f, 1.0f);
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         
         renderGame(&gameState, &quad, shaderProgram);
-        
+#endif        
         glfwSwapBuffers(window);
     }
     

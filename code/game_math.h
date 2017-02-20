@@ -209,19 +209,19 @@ static inline m4x4 identity(void)
     return result;
 }
 
-static inline m4x4 orthographicProjection(real32 aspectWidthOverHeight)
+static inline m4x4 orthographicProjection(real32 Left, real32 Right, real32 Bottom,
+                                          real32 Top, real32 Near, real32 Far)
 {
-    real32 a = 1.0f;
-    real32 b = aspectWidthOverHeight;
-    
-    m4x4 result =
-    {
-        {{a,  0,  0,  0},
-         {0,  b,  0,  0},
-         {0,  0,  1,  0},
-         {0,  0,  0,  1}}
-    };
-    
+    m4x4 result = identity();
+
+    result.E[0][0] = 2.0f / (Right - Left);
+    result.E[1][1] = 2.0f / (Top - Bottom);
+    result.E[2][2] = 2.0f / (Near - Far);
+
+    result.E[3][0] = (Left + Right) / (Left - Right);
+    result.E[3][1] = (Bottom + Top) / (Bottom - Top);
+    result.E[3][2] = (Far + Near) / (Near - Far);
+
     return result;
 }
 
@@ -229,9 +229,9 @@ static inline m4x4 translate(m4x4 a, v3 t)
 {
     m4x4 result = a;
     
-    result.E[0][3] += t.x;
-    result.E[1][3] += t.y;
-    result.E[2][3] += t.z;
+    result.E[3][0] += t.x;
+    result.E[3][1] += t.y;
+    result.E[3][2] += t.z;
     
     return result;
 }
