@@ -27,30 +27,9 @@ struct shader
     struct shaderData fragmentShader;
 };
 
-struct gameObject
+struct input
 {
-    v2 position, size, velocity;
-    v3 color;    
-    real32 rotation;
-    bool32 solid;
-    int levelIndex;
-};
-
-#define LEVEL_WIDTH 15
-#define LEVEL_HEIGHT 8
-
-#define NUMBER_OF_LEVELS 2
-
-struct gameLevel
-{
-    struct gameObject tiles[LEVEL_HEIGHT*LEVEL_WIDTH];
-};
-
-struct game
-{
-    bool32 keys[1024];    
-    struct gameLevel level[NUMBER_OF_LEVELS];
-    struct gameObject player;
+    bool32 keys[1024];
 };
 
 #endif

@@ -13,6 +13,8 @@
 #include "game_platform.h"
 #include "win32_game.h"
 #include "game_math.h"
+#include "game_opengl.cpp"
+
 /*
   1280×720 (HD, 720p)
   1920×1080 (FHD, Full HD, 2K 1080p)
@@ -21,9 +23,10 @@
 
 static int windowWidth = 1280;
 static int windowHeight = 720;
+static struct quad quad;
+static struct input input;
 
-static real32 playerVelocity = 500.0f;
-static struct game game;
+#include "game.cpp"
 
 static void readEntireShaderFromFile(struct shaderData *shader, GLenum shaderType)
 {
@@ -135,290 +138,6 @@ static void hotLoadShaderFromFile(struct shaderData *vertexShader, struct shader
     }
 } 
 
-struct quad
-{
-    GLuint VAO;
-};
-
-static void initQuad(struct quad *quad)
-{
-    GLuint VBO;
-    GLfloat vertices[] =
-    {
-        0.0f, 1.0f,
-        1.0f, 0.0f,
-        0.0f, 0.0f,
-
-        0.0f, 1.0f,
-        1.0f, 1.0f,
-        1.0f, 0.0f,
-    };
-
-    glGenVertexArrays(1, &quad->VAO);
-    glGenBuffers(1, &VBO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindVertexArray(quad->VAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(GLfloat), (GLvoid*)0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-}
-
-static void drawGameObject(struct gameObject *object, struct quad *quad, GLuint shaderProgram)
-{
-    
-    glUseProgram(shaderProgram);
-#if 1
-    m4x4 model = identity();
-    model = translate(model, {object->position.x, object->position.y, 0.0f});
-
-    model = scale(model, {object->size.x, object->size.y, 1.0f});
-    
-    GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, model.E[0]);
-
-    
-    m4x4 projection = orthographicProjection(0.0f, (real32)windowWidth, (real32)windowHeight,
-                                             0.0f, -1.0f, 1.0f);
-    GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection.E[0]);
-    
-    GLuint colorLoc = glGetUniformLocation(shaderProgram, "ourColor");
-    glUniform3fv(colorLoc, 1, &object->color.E[0]);
-#else
-
-    glm::mat4 model;
-    model = glm::translate(model, glm::vec3(object->glmPos, 0.0f));
-    model = glm::scale(model, glm::vec3(object->glmSize, 1.0f));
-
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<GLfloat>(windowWidth), 
-                                      static_cast<GLfloat>(windowHeight), 0.0f, -1.0f, 1.0f);
-    GLuint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-                    
-    GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(model));
-    GLuint colorLoc = glGetUniformLocation(shaderProgram, "ourColor");
-    glUniform3fv(colorLoc, 1, glm::value_ptr(object->glmColor));
-#endif    
-    glBindVertexArray(quad->VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
-}
-
-static void drawLevel(struct gameLevel *level, struct quad *quad, GLuint shaderProgram)
-{
-    for (int tileIndex = 0; tileIndex < LEVEL_HEIGHT*LEVEL_WIDTH; tileIndex++)
-    {
-        drawGameObject(&level->tiles[tileIndex], quad, shaderProgram);
-    }
-}
-
-static void renderGame(struct game *gameState, struct quad *quad, GLuint shaderProgram)
-{
-    int levelIndex = gameState->player.levelIndex;
-    
-    drawLevel(&gameState->level[levelIndex], quad, shaderProgram);
-    drawGameObject(&gameState->player, quad, shaderProgram);
-}
-
-static void initGameObject(struct gameObject *object)
-{
-    object->position = {0.0f, 0.0f};
-    object->size = {1.0f, 1.0f};
-    object->velocity = {};
-    object->color = {1.0f, 1.0f, 0.0f};
-    object->rotation = 0.0f;
-}
-
-static void initLevel(struct gameLevel *level, int tileData[LEVEL_HEIGHT][LEVEL_WIDTH])
-{    
-    GLuint height = LEVEL_HEIGHT;
-    GLuint width = LEVEL_WIDTH;    
-    real32 tileWidth = windowWidth/(real32)width;
-    real32 tileHeight = (windowHeight)/(real32)height;
-
-    int tileIndex = 0;
-    
-    for (int y = 0; y < LEVEL_HEIGHT; y++)
-    {
-        for (int x = 0; x < LEVEL_WIDTH; x++)
-        {
-            initGameObject(&level->tiles[tileIndex]);
-            if (tileData[y][x] == 1)
-            {
-                level->tiles[tileIndex].solid = true;
-                level->tiles[tileIndex].position = { tileWidth * x, tileHeight * y };
-                level->tiles[tileIndex].size = { tileWidth, tileHeight };
-                level->tiles[tileIndex].color = { 0.58f, 0.58f, 0.58f };
-                
-                tileIndex++;
-            }
-            else
-            {
-                level->tiles[tileIndex].solid = false;
-                level->tiles[tileIndex].position = { tileWidth*x, tileHeight*y };
-                level->tiles[tileIndex].size = { tileWidth, tileHeight };
-                level->tiles[tileIndex].color = { 0.40f, 0.73f, 0.36f };
-
-                tileIndex++;
-            }
-        }
-    }
-}
-
-static void initPlayer(struct gameObject *player)
-{
-    initGameObject(player);
-    int playerWidth = (windowWidth/(LEVEL_WIDTH))/2;
-    int playerHeight = (windowHeight/(LEVEL_HEIGHT)) - 10;
-
-    player->position = {300.0f, 300.0f};
-    player->size = {(real32)playerWidth, (real32)playerHeight};
-    player->color = {0.3f, 0.4f, 0.3f};
-    player->solid = true;
-}
-
-static void initGame(struct game *gameState)
-{
-    initGameObject(&gameState->player);
-
-    int tileData1[LEVEL_HEIGHT][LEVEL_WIDTH] =
-    {
-        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,},
-        {0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
-    };
-    
-    initLevel(&gameState->level[0], tileData1);
-
-    int tileData2[LEVEL_HEIGHT][LEVEL_WIDTH] =
-    {
-        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
-        {1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0,},
-        {0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,  0, 1,},
-        {1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
-    };
-
-    initLevel(&gameState->level[1], tileData2);
-    initPlayer(&gameState->player);
-}
-
-static void updateGame(struct game *gameState)
-{
-    //movePlayer(gameState->player);
-}
-
-static GLboolean checkCollision(struct gameObject *object1, struct gameObject *object2)
-{
-    GLboolean collisionX = object1->position.x + object1->size.x >= object2->position.x
-        && object2->position.x + object2->size.x >= object1->position.x;
-    GLboolean collisionY = object1->position.y + + object1->size.y >= object2->position.y
-        && object2->position.y + object2->size.y >= object1->position.y;
-
-    GLboolean collided = collisionX && collisionY;
-    return collided;
-}
-
-static bool32 collision(struct game *gameState)
-{
-    int levelIndex = gameState->player.levelIndex;
-    for (int i = 0; i < LEVEL_HEIGHT*LEVEL_WIDTH; i++)
-    {
-        if (gameState->level[levelIndex].tiles[i].solid == true)
-        {
-            if (checkCollision(&gameState->player, &gameState->level[levelIndex].tiles[i]))
-            {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-
-static void processInput(struct game *gameState, GLfloat dt)
-{
-    real32 velocity = playerVelocity * dt * 100;
-    
-    if (gameState->keys[GLFW_KEY_A] || gameState->keys[GLFW_KEY_LEFT])
-    {
-        if (gameState->player.position.x >= 0)
-        {
-            real32 oldPosition = gameState->player.position.x;
-            gameState->player.position.x -= velocity * dt;
-            if (collision(gameState))
-            {
-                gameState->player.position.x = oldPosition;
-            }
-        }
-    }
-    if (gameState->keys[GLFW_KEY_D] || gameState->keys[GLFW_KEY_RIGHT])
-    {
-        if (gameState->player.position.x <= windowWidth - gameState->player.size.x)
-        {
-            real32 oldPosition = gameState->player.position.x;
-            gameState->player.position.x += velocity * dt;
-            if (collision(gameState))
-            {
-                gameState->player.position.x = oldPosition;
-            }
-        }
-    }
-    if (gameState->keys[GLFW_KEY_W] || gameState->keys[GLFW_KEY_UP])
-    {
-        if (gameState->player.position.y >= 0)
-        {
-            real32 oldPosition = gameState->player.position.y;
-            gameState->player.position.y -= velocity * dt;
-            if (collision(gameState))
-            {
-                gameState->player.position.y = oldPosition;
-            }
-        }
-        else
-        {
-            if (gameState->player.levelIndex + 1 < NUMBER_OF_LEVELS)
-            { 
-                gameState->player.levelIndex += 1;
-                gameState->player.position.y = (real32)windowHeight;
-            }
-        }
-    }
-    if (gameState->keys[GLFW_KEY_S] || gameState->keys[GLFW_KEY_DOWN])
-    {
-        if (gameState->player.position.y <= windowHeight - gameState->player.size.x)
-        {
-            real32 oldPosition = gameState->player.position.y;
-            gameState->player.position.y += velocity * dt;
-            if (collision(gameState))
-            {
-                gameState->player.position.y = oldPosition;
-            }
-        }
-        else
-        {
-            if (gameState->player.levelIndex - 1 >= 0)
-            {
-                gameState->player.levelIndex -= 1;
-                gameState->player.position.y = 0.0f;
-            }
-        }
-    }
-}
-
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -442,20 +161,17 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mode
     }
     if (key == GLFW_KEY_L && action == GLFW_PRESS)
     {
-        char locationString[512] = {};
-        snprintf(locationString, sizeof(locationString), "Player current location x:%0.2f y:%0.2f\n", game.player.position.x,
-                 game.player.position.y);
-        OutputDebugString(locationString);
+
     }
     if (key >= 0 && key < 1024)
     {
         if (action == GLFW_PRESS)
         {
-            game.keys[key] = GL_TRUE;
+            input.keys[key] = true;
         }
         else if (action == GLFW_RELEASE)
         {
-            game.keys[key] = GL_FALSE;
+            input.keys[key] = false;
         }
             
     }
@@ -478,10 +194,6 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     glGetError();
 
     glViewport(0, 0, windowWidth, windowHeight);
-
-    struct quad quad;
-    initQuad(&quad);
-    initGame(&game);
     
     struct shaderData vertexShader = {};
     struct shaderData fragmentShader = {};
@@ -492,6 +204,13 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     GLuint shaderProgram = 0;
     hotLoadShaderFromFile(&vertexShader, &fragmentShader, &shaderProgram);
 
+    quad.shaderProgram = shaderProgram;
+    initQuadVAO(&quad);
+    
+    m4x4 projection = orthographicProjection(0.0f, (real32)windowWidth, (real32)windowHeight, 0.0f,
+                                             -1.0f, 1.0f); 
+    GL_setShaderProgramProjectionMatrix(shaderProgram, projection);
+    
     GLint nbFrames = 0;
     GLfloat lastTime = (GLfloat)glfwGetTime();
     GLfloat deltaTime = 0.0f;
@@ -520,14 +239,13 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         glfwPollEvents();
 
         // game process input
-        processInput(&game, deltaTime);
-        // game update
 
-        // game render
+        // game update
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        
-        renderGame(&game, &quad, shaderProgram);
+
+        // game render        
+        gameUpdateAndRender(&input);
 
         glfwSwapBuffers(window);
     }
