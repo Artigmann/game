@@ -33,10 +33,13 @@ struct gameObject
     v3 color;    
     real32 rotation;
     bool32 solid;
+    int levelIndex;
 };
 
 #define LEVEL_WIDTH 15
 #define LEVEL_HEIGHT 8
+
+#define NUMBER_OF_LEVELS 2
 
 struct gameLevel
 {
@@ -46,7 +49,7 @@ struct gameLevel
 struct game
 {
     bool32 keys[1024];    
-    struct gameLevel level;
+    struct gameLevel level[NUMBER_OF_LEVELS];
     struct gameObject player;
 };
 

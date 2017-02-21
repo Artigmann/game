@@ -219,7 +219,9 @@ static void drawLevel(struct gameLevel *level, struct quad *quad, GLuint shaderP
 
 static void renderGame(struct game *gameState, struct quad *quad, GLuint shaderProgram)
 {
-    drawLevel(&gameState->level, quad, shaderProgram);
+    int levelIndex = gameState->player.levelIndex;
+    
+    drawLevel(&gameState->level[levelIndex], quad, shaderProgram);
     drawGameObject(&gameState->player, quad, shaderProgram);
 }
 
@@ -232,20 +234,8 @@ static void initGameObject(struct gameObject *object)
     object->rotation = 0.0f;
 }
 
-static void initLevel(struct gameLevel *level)
-{
-    int tileData[LEVEL_HEIGHT][LEVEL_WIDTH] =
-    {
-        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,},
-        {0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
-        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
-    };
-
+static void initLevel(struct gameLevel *level, int tileData[LEVEL_HEIGHT][LEVEL_WIDTH])
+{    
     GLuint height = LEVEL_HEIGHT;
     GLuint width = LEVEL_WIDTH;    
     real32 tileWidth = windowWidth/(real32)width;
@@ -263,7 +253,7 @@ static void initLevel(struct gameLevel *level)
                 level->tiles[tileIndex].solid = true;
                 level->tiles[tileIndex].position = { tileWidth * x, tileHeight * y };
                 level->tiles[tileIndex].size = { tileWidth, tileHeight };
-                level->tiles[tileIndex].color = { 0.0f, 0.0f, 0.0f };
+                level->tiles[tileIndex].color = { 0.58f, 0.58f, 0.58f };
                 
                 tileIndex++;
             }
@@ -272,7 +262,7 @@ static void initLevel(struct gameLevel *level)
                 level->tiles[tileIndex].solid = false;
                 level->tiles[tileIndex].position = { tileWidth*x, tileHeight*y };
                 level->tiles[tileIndex].size = { tileWidth, tileHeight };
-                level->tiles[tileIndex].color = { 1.0f, 1.0f, 1.0f };
+                level->tiles[tileIndex].color = { 0.40f, 0.73f, 0.36f };
 
                 tileIndex++;
             }
@@ -295,7 +285,34 @@ static void initPlayer(struct gameObject *player)
 static void initGame(struct game *gameState)
 {
     initGameObject(&gameState->player);
-    initLevel(&gameState->level);
+
+    int tileData1[LEVEL_HEIGHT][LEVEL_WIDTH] =
+    {
+        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0,},
+        {0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
+        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
+    };
+    
+    initLevel(&gameState->level[0], tileData1);
+
+    int tileData2[LEVEL_HEIGHT][LEVEL_WIDTH] =
+    {
+        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1,},
+        {1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0,},
+        {0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1,  0, 1,},
+        {1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1,},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,},
+        {1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1,},
+    };
+
+    initLevel(&gameState->level[1], tileData2);
     initPlayer(&gameState->player);
 }
 
@@ -317,11 +334,12 @@ static GLboolean checkCollision(struct gameObject *object1, struct gameObject *o
 
 static bool32 collision(struct game *gameState)
 {
+    int levelIndex = gameState->player.levelIndex;
     for (int i = 0; i < LEVEL_HEIGHT*LEVEL_WIDTH; i++)
     {
-        if (gameState->level.tiles[i].solid == true)
+        if (gameState->level[levelIndex].tiles[i].solid == true)
         {
-            if (checkCollision(&gameState->player, &gameState->level.tiles[i]))
+            if (checkCollision(&gameState->player, &gameState->level[levelIndex].tiles[i]))
             {
                 return true;
             }
@@ -361,7 +379,7 @@ static void processInput(struct game *gameState, GLfloat dt)
     }
     if (gameState->keys[GLFW_KEY_W] || gameState->keys[GLFW_KEY_UP])
     {
-        if (gameState->player.position.x >= 0)
+        if (gameState->player.position.y >= 0)
         {
             real32 oldPosition = gameState->player.position.y;
             gameState->player.position.y -= velocity * dt;
@@ -370,16 +388,32 @@ static void processInput(struct game *gameState, GLfloat dt)
                 gameState->player.position.y = oldPosition;
             }
         }
+        else
+        {
+            if (gameState->player.levelIndex + 1 < NUMBER_OF_LEVELS)
+            { 
+                gameState->player.levelIndex += 1;
+                gameState->player.position.y = (real32)windowHeight;
+            }
+        }
     }
     if (gameState->keys[GLFW_KEY_S] || gameState->keys[GLFW_KEY_DOWN])
     {
-        if (gameState->player.position.x <= windowWidth - gameState->player.size.x)
+        if (gameState->player.position.y <= windowHeight - gameState->player.size.x)
         {
             real32 oldPosition = gameState->player.position.y;
             gameState->player.position.y += velocity * dt;
             if (collision(gameState))
             {
                 gameState->player.position.y = oldPosition;
+            }
+        }
+        else
+        {
+            if (gameState->player.levelIndex - 1 >= 0)
+            {
+                gameState->player.levelIndex -= 1;
+                gameState->player.position.y = 0.0f;
             }
         }
     }
@@ -405,6 +439,13 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mode
         {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
+    }
+    if (key == GLFW_KEY_L && action == GLFW_PRESS)
+    {
+        char locationString[512] = {};
+        snprintf(locationString, sizeof(locationString), "Player current location x:%0.2f y:%0.2f\n", game.player.position.x,
+                 game.player.position.y);
+        OutputDebugString(locationString);
     }
     if (key >= 0 && key < 1024)
     {
