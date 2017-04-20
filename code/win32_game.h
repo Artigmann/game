@@ -29,6 +29,7 @@ struct shader
 
 struct input
 {
+    real32 deltaTime;
     bool32 keys[1024];
 };
 

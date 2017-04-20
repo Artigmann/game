@@ -179,6 +179,9 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mode
 
 int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, int showCode)
 {
+    
+
+    
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -216,13 +219,15 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
     GLfloat deltaTime = 0.0f;
     GLfloat lastFrame = 0.0f;
 
+    glfwSwapInterval(0);
+    
     while (!glfwWindowShouldClose(window))
     {
         GLfloat currentFrame = (GLfloat)glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-
-
+        input.deltaTime = deltaTime;
+        
         GLfloat currentTime = (GLfloat)glfwGetTime();
         nbFrames++;
         if (currentTime - lastTime >= 1.0f)
@@ -244,9 +249,10 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine, 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // game render        
+        // game render
         gameUpdateAndRender(&input);
 
+//        glfwSetWindowTitle(window, debugString);
         glfwSwapBuffers(window);
     }
     
